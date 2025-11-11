@@ -1,4 +1,20 @@
 # SmartWindow
+Working:
+The smart window works by using Hand Gesture movement (powered
+by ultrasonic sensors), as well as remote application (powered by
+ESP32) , All sensors are relayed to Arduino, which relays its output to
+the LED’s and the ESP32 , which also receives from Wi-Fi , which
+results in turning of the servo motor.
+
+Components:
+● Arduino Uno
+● ESP32
+● Breadboard
+● Servo Motor
+● Smoke Sensor
+● Water Level Sensor
+● Ultrasonic Sensor
+● LED
 
 Circuit Diagram :
 
