@@ -1,0 +1,135 @@
+#include <Servo.h>
+#define MOISTURE_PIN A0
+#define SMOKE_PIN A1
+#define TRIG_PIN 7
+#define ECHO_PIN 6
+#define SERVO_PIN 9
+#define OPEN_LED 3
+#define CLOSE_LED 4
+Servo windowServo;
+bool lastWindowState = false; // Track the last window state
+bool openWindow = false;
+bool flag=false;
+void setup() {
+Serial.begin(9600); // Initialize serial communication
+windowServo.attach(SERVO_PIN);
+windowServo.write(0); // Start with the window closed
+pinMode(TRIG_PIN, OUTPUT);
+pinMode(ECHO_PIN, INPUT);
+pinMode(OPEN_LED, OUTPUT);
+pinMode(CLOSE_LED, OUTPUT);
+// Start with both LEDs off
+digitalWrite(OPEN_LED, LOW);
+digitalWrite(CLOSE_LED, LOW);
+// Initial status message
+Serial.println("Arduino starting...");
+}
+void loop() {
+// Read sensor values
+int moistureLevel = analogRead(MOISTURE_PIN);
+int smokeLevel = analogRead(SMOKE_PIN);
+long distance = getDistance();
+// Debug sensor readings
+Serial.print("Sensor Readings -> ");
+Serial.print("Moisture: "); Serial.print(moistureLevel);
+Serial.print(", Smoke: "); Serial.print(smokeLevel);
+Serial.print(", Distance: "); Serial.println(distance);
+// Determine window state
+// Decision logic
+if (moistureLevel < 1020) {
+openWindow = false;
+Serial.println("High moisture detected! Closing Windows");
+}
+if (smokeLevel >52 ) {
+openWindow = true;
+Serial.println("Smoke detected! Opening Windows");
+}
+if (distance < 50) {
+if(openWindow){
+openWindow = false;
+Serial.println("hand detected - close window");
+}
+else{
+openWindow = true;
+Serial.println("hand detected - open window");
+}
+}
+// Only send and update if state has changed
+if (openWindow != lastWindowState) {
+// Send window status to ESP32 - single digit followed by newline
+Serial.println(openWindow ? "1" : "0");
+if (openWindow) {
+windowServo.write(90); // Open the window
+digitalWrite(OPEN_LED, HIGH);
+digitalWrite(CLOSE_LED, LOW);
+Serial.println("Action: Opening window");
+} else {
+windowServo.write(0); // Close the window
+digitalWrite(CLOSE_LED, HIGH);
+digitalWrite(OPEN_LED, LOW);
+Serial.println("Action: Closing window");
+}
+lastWindowState = openWindow; // Update last state
+}
+//test receive data from esp
+if (Serial.available()) {
+String receivedData = Serial.readStringUntil('\n');
+receivedData.trim(); 
+// Remove any whitespace or newline
+
+Serial.print("Received from ESP32: ");
+Serial.println(receivedData);
+if(receivedData=="1")
+{
+Serial.println("INSIDE IF for 1:"+receivedData);
+flag=true;
+}
+else
+{
+Serial.println("INSIDE IF for 0:"+receivedData);
+flag=false;
+}
+Serial.println("flag="+flag);
+lastWindowState=flag;
+if(lastWindowState)
+{
+Serial.println("OPEN WINDOW-GREEN");
+openWindow=lastWindowState;
+digitalWrite(OPEN_LED, HIGH);
+digitalWrite(CLOSE_LED, LOW);
+}
+else
+{
+Serial.println("CLOSE WINDOW-RED");
+openWindow=lastWindowState;
+digitalWrite(CLOSE_LED, HIGH);
+digitalWrite(OPEN_LED, LOW);
+}
+}
+openWindow=lastWindowState;
+digitalWrite(OPEN_LED, HIGH);
+digitalWrite(CLOSE_LED, LOW);
+}
+else
+{
+Serial.println("CLOSE WINDOW-RED");
+openWindow=lastWindowState;
+digitalWrite(CLOSE_LED, HIGH);
+digitalWrite(OPEN_LED, LOW);
+}
+}
+// Add separator for readability in serial monitor
+Serial.println("------------------------");
+delay(1000); // Reduced delay for more responsive operation
+}
+
+long getDistance() {
+digitalWrite(TRIG_PIN, LOW);
+delayMicroseconds(2);
+digitalWrite(TRIG_PIN, HIGH);
+delayMicroseconds(10);
+digitalWrite(TRIG_PIN, LOW);
+long duration = pulseIn(ECHO_PIN, HIGH);
+long distance = duration * 0.034 / 2;
+return distance;
+}
